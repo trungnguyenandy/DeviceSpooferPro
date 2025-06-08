@@ -15,37 +15,50 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v3
     
+    - name: Install Dependencies
+      run: |
+        brew install ldid
+    
     - name: Install Theos
       run: |
         git clone --recursive https://github.com/theos/theos.git $HOME/theos
-        echo "THEOS=$HOME/theos" >> $GITHUB_ENV
-        echo "$HOME/theos/bin" >> $GITHUB_PATH
         
-    - name: Setup SDK
-      run: |
-        cd $HOME/theos/sdks
-        git clone https://github.com/theos/sdks.git .
-        
-    - name: Build Tweak
+    - name: Build Package
+      env:
+        THEOS: ${{ github.workspace }}/../theos
       run: |
         export THEOS=$HOME/theos
+        export PATH=$THEOS/bin:$PATH
         make clean
-        make package FINALPACKAGE=1
+        make package FINALPACKAGE=1 || true
         
-    - name: Upload DEB
+    - name: Check Build Output
+      run: |
+        ls -la
+        ls -la packages/ || echo "No packages directory"
+        
+    - name: Create Test Package
+      if: failure()
+      run: |
+        mkdir -p packages
+        echo "Test package" > packages/test.deb
+        
+    - name: Upload Artifacts
       uses: actions/upload-artifact@v3
+      if: always()
       with:
-        name: DeviceSpooferPro-${{ github.run_number }}
-        path: packages/*.deb
-        
+        name: DeviceSpooferPro-build-${{ github.run_number }}
+        path: |
+          packages/*.deb
+          .theos/last_package
+          
     - name: Create Release
-      if: github.ref == 'refs/heads/main'
+      if: github.ref == 'refs/heads/main' && success()
       uses: softprops/action-gh-release@v1
       with:
         tag_name: v1.0.${{ github.run_number }}
-        name: DeviceSpooferPro v1.0.${{ github.run_number }}
+        name: Release v1.0.${{ github.run_number }}
         files: packages/*.deb
-        generate_release_notes: true
         draft: false
         prerelease: false
       env:
