@@ -1,0 +1,33 @@
+name: Build iOS Tweak
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: macos-12
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Install Theos
+      run: |
+        git clone --recursive https://github.com/theos/theos.git $HOME/theos
+        
+    - name: Build
+      env:
+        THEOS: ${{ github.workspace }}/theos
+      run: |
+        export THEOS=$HOME/theos
+        export PATH=$THEOS/bin:$PATH
+        make clean
+        make package
+        
+    - name: Upload Build
+      uses: actions/upload-artifact@v3
+      with:
+        name: DeviceSpooferPro-${{ github.sha }}
+        path: packages/*.deb
