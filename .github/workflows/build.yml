@@ -1,33 +1,52 @@
-name: Build iOS Tweak
+name: Build DeviceSpooferPro
 
 on:
   push:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: macos-12
     
     steps:
-    - uses: actions/checkout@v3
+    - name: Checkout
+      uses: actions/checkout@v3
     
     - name: Install Theos
       run: |
         git clone --recursive https://github.com/theos/theos.git $HOME/theos
+        echo "THEOS=$HOME/theos" >> $GITHUB_ENV
+        echo "$HOME/theos/bin" >> $GITHUB_PATH
         
-    - name: Build
-      env:
-        THEOS: ${{ github.workspace }}/theos
+    - name: Setup SDK
+      run: |
+        cd $HOME/theos/sdks
+        git clone https://github.com/theos/sdks.git .
+        
+    - name: Build Tweak
       run: |
         export THEOS=$HOME/theos
-        export PATH=$THEOS/bin:$PATH
         make clean
-        make package
+        make package FINALPACKAGE=1
         
-    - name: Upload Build
+    - name: Upload DEB
       uses: actions/upload-artifact@v3
       with:
-        name: DeviceSpooferPro-${{ github.sha }}
+        name: DeviceSpooferPro-${{ github.run_number }}
         path: packages/*.deb
+        
+    - name: Create Release
+      if: github.ref == 'refs/heads/main'
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: v1.0.${{ github.run_number }}
+        name: DeviceSpooferPro v1.0.${{ github.run_number }}
+        files: packages/*.deb
+        generate_release_notes: true
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
