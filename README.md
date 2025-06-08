@@ -40,3 +40,6 @@ obj/
 # Credentials - NEVER commit these!
 *.token
 .env
+
+## Build Status
+![Build](https://github.com/trungnguyenandy/DeviceSpooferPro/actions/workflows/build.yml/badge.svg)
